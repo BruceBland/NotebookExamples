@@ -1,0 +1,52 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  word_document: default
+  html_document:
+    
+    df_print: paged
+  pdf_document: default
+---
+
+##Demo of Kable
+
+See more : https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
+
+
+##### Table 2 - Demo
+
+```{r table2, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+
+library(kableExtra)
+library(dplyr)
+
+Mydf1 <- data.frame(Inst="NFLX",Price=2.3,Date="20180101",Volatility=1.2,Desc="Netflix")
+Mydf2 <- data.frame(Inst="MSFT",Price=22.3,Date="20180101",Volatility=1.2,Desc="Microsoft")
+Mydf3 <- data.frame(Inst="AMZN",Price=122.3,Date="20180102",Volatility=3.2,Desc="Amazon")
+Mydf <- rbind(Mydf1,Mydf2,Mydf3)
+
+Mydf$Volatility <- cell_spec(Mydf$Volatility, color = ifelse(Mydf$Volatility > 2, "red", "black"))
+Mydf$Inst <- cell_spec(Mydf$Inst, color = "black",angle = -60,font_size=8)
+
+kable(Mydf,escape = F, 
+      row.names=FALSE, 
+      align=c("l", "l", "c","r"),
+      booktabs=TRUE) %>% 
+        kable_styling(font_size=11,
+              bootstrap_options = c("striped"),
+              full_width = F,
+              position = "left") %>%
+            column_spec(1, width = "1cm",bold = T, border_right = T) %>%
+            column_spec(2, width = "5cm", background = "yellow") %>%
+            row_spec(2:2, bold = T, color = "white", background = "#D7261E") %>%
+  row_spec(0, bold = TRUE) %>%
+  add_header_above(c(" ", "What" = 1, "How much" = 3))  %>%
+  add_header_above(c(" ", "Main Header" = 4)) %>%
+  footnote(number = c("Data Source: Fidessa", "Demo purposes only"))
+
+
+
+```
+
+#The end
