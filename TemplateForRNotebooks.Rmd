@@ -1,0 +1,82 @@
+---
+output:
+  pdf_document: default
+---
+
+```{r RemoveOldData, message=FALSE, warning=FALSE, include=FALSE}
+
+rm(list = ls())         # Remove all previous data
+
+# Add parameters here
+Param1 = "Param1"
+Param2 = "Param2"
+
+```
+
+#Notebook template
+
+#####*Created date : **`r Sys.Date()`** *
+
+#Title
+
+This report ...
+
+#Data used in the report
+
+Show where data has come from
+
+#Settings used
+
+- Parameter 1  : `r Param1`
+- Parameter 2  : `r Param2`
+
+```{r Init, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Add library calls here
+library(ggplot2)
+library(ggforce)
+library(gridExtra)
+library(tidyverse)
+library(pander)
+
+#Source own library functions here
+#source("MyLibraryHere.R")  
+
+```
+
+\pagebreak
+
+#Process
+
+```{r Process, echo=FALSE, fig.height=9, fig.width=8, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+
+```
+
+\pagebreak
+
+#Results
+
+Add results comment here ...
+
+```{r ResultsBasic, echo=FALSE, fig.height=9, fig.width=8,message=FALSE, warning=FALSE}
+
+Result1 = 0.1
+
+```
+
+##### - Result1           : `r Result1`
+
+\pagebreak
+
+#Appendix A - Detailed results tables
+
+```{r echo=FALSE, fig.height=9, fig.width=8, message=FALSE, warning=FALSE}
+
+#pander(data.frame(Inst=ResultsDataFrame$Inst,
+#                  AdjustedProfit=ResultsDataFrame$Profit.AdjustedProfit,
+#                  HoldingProfit=ResultsDataFrame$Profit.HoldingProfit))
+
+```
+
+#End of Document
