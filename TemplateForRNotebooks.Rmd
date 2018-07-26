@@ -27,9 +27,6 @@ Show where data has come from
 
 #Settings used
 
-- Parameter 1  : `r Param1`
-- Parameter 2  : `r Param2`
-
 ```{r Init, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Add library calls here
@@ -64,8 +61,6 @@ Add results comment here ...
 Result1 = 0.1
 
 ```
-
-##### - Result1           : `r Result1`
 
 \pagebreak
 
