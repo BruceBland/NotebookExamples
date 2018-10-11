@@ -1,0 +1,30 @@
+---
+title: "Using AI"
+geometry: margin=1.1in
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: '2'
+  html_notebook: default
+  html_document:
+    toc: yes
+    toc_depth: 2
+  word_document:
+    toc: yes
+    toc_depth: 2
+fontsize: 10pt
+---
+
+\pagebreak
+```{r child = 'Chapter1_LoadingData.Rmd'}
+``` 
+\pagebreak
+```{r child = 'Chapter2_FittingModels.Rmd'}
+``` 
+\pagebreak
+```{r child = 'Chapter3_XGBoost.Rmd'}
+``` 
+\pagebreak
+```{r child = 'Chapter4_MultiInstrumentTests.Rmd'}
+``` 
