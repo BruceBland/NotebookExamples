@@ -1,0 +1,587 @@
+---
+title: "Cluster Analysis v1.0"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    source_code: embed
+    navbar:
+      - { title: "Index Page", href: "file:///L:/RACAD/MarketingAnalysis/MarketingAnalysisProject/Index.html", align: left }
+---
+
+
+```{r setup, include=TRUE}
+
+source("BenchTest_Machine_Learning_Framework_Beta.R")
+
+# Set up the script to be quiet when running
+knitr::opts_knit$set(progress = FALSE, verbose = FALSE)
+
+# Load all the libraries required
+library(flexdashboard)
+library(plotly)
+library(plyr)
+library(DT)
+library(directlabels)
+library(tidyverse)
+
+DataLoadAndFormat <- function(Backtest=TRUE,Debug=TRUE,ConvertToFactors=FALSE,DataLoadParameters="")
+{
+  if (Debug==TRUE) {print("Loading data")}
+  
+  df = read.csv("2018 Customer Revenue Analysis - v2.41.csv",
+                na.strings=c("", " "),stringsAsFactors=TRUE)
+  
+  
+  # Convert to USD
+  NewDF <- data.frame(Firm = df$FIRM,
+                      Year = df$Cyear,
+                      Period = df$Fqtr,
+                      Base.CCY = df$BASE.CCY,
+                      CMDName = df$CM.DIV,
+                      Region=df$REGION,
+                      Country=df$COUNTRY,
+                      Est = df$EST,
+                      Grev = df$GREV,
+                      GPBT = df$GPBT,
+                      IBrev = df$IBREV,
+                      IBPBT = df$IBPBT,
+                      CM.FICC = df$S.T.FICC,
+                      CM.EQT = df$S.T.EQT,
+                      CM.OTH = df$S.T.OTH,
+                      USD = df$USDrate)
+  
+  # Transform to numeric
+  NewDF$Grev         <- as.numeric(NewDF$Grev)
+  NewDF$GPBT         <- as.numeric(NewDF$GPBT)
+  NewDF$IBrev        <- as.numeric(NewDF$IBrev)
+  NewDF$IBPBT        <- as.numeric(NewDF$IBPBT)
+  NewDF$CM.FICC      <- as.numeric(NewDF$CM.FICC)
+  NewDF$CM.EQT       <- as.numeric(NewDF$CM.EQT)
+  NewDF$CM.OTH       <- as.numeric(NewDF$CM.OTH)
+  NewDF$USD         <- as.numeric(NewDF$USD)
+  
+  # Convert to factors
+  NewDF$Firm         <- factor(NewDF$Firm)
+  NewDF$Year         <- factor(NewDF$Year)
+  NewDF$Region       <- factor(NewDF$Region)
+  NewDF$Country      <- factor(NewDF$Country)
+  NewDF$Base.CCY      <- factor(NewDF$Base.CCY)
+  NewDF$Period      <- factor(NewDF$Period)
+
+  # Fix estimate column
+  NewDF$Est <- ifelse(NewDF$Est == "EST",1,0)
+  
+  if (Debug==TRUE) {print("Finished loading test data")}
+  
+  return(NewDF)
+  
+}
+
+
+theme_AI <- function()
+{
+  
+  palette <- c("#FFFFFF", "#F0F0F0", "#A7A8AA", "#BDBDBD", "#969696", "#16C5A8",
+               "#525252", "#252525", "#000000")
+  
+  color.background = palette[1]
+  color.grid.major = palette[2]
+  color.axis.text = palette[7]
+  color.axis.title = palette[7]
+  color.title = palette[9]
+  
+  theme_bw(base_size=10) +
+    
+    theme(
+      
+      panel.background=element_rect(fill=color.background, color=color.background),
+      plot.background=element_rect(fill=color.background, color=color.background),
+      panel.border=element_rect(color=color.background),
+      
+      legend.position = "top",
+      
+      panel.grid.major=element_line(color=color.grid.major,size=.25),
+      panel.grid.minor=element_blank(),
+      
+      axis.ticks=element_blank(),
+      
+      legend.background = element_rect(fill=color.background),
+      legend.key = element_rect(fill=color.background, color=NA),
+      legend.text = element_text(size=10,color=color.axis.title),
+      
+      plot.title=element_text(color=color.title, size=13, vjust=1.25),
+      plot.subtitle=element_text(color=color.title, size=12, vjust=1.25),
+      axis.text.x=element_text(size=10,color=color.axis.text),
+      axis.text.y=element_text(size=10,color=color.axis.text),
+      axis.title.x=element_text(size=11,color=color.axis.title, vjust=0),
+      axis.title.y=element_text(size=11,color=color.axis.title, vjust=1.25),
+      
+      plot.margin  = unit(c(0.1, 0.1, 0.1, 0.1), "cm")
+      
+    )
+  
+}
+
+StandardColours <- read.csv("CompanyColoursDataSet.csv")
+
+Dark1Set = as.character(StandardColours$Dark1)
+names(Dark1Set) = StandardColours$Company
+
+df <- DataLoadAndFormat(Debug=FALSE)
+
+```
+
+```{r}
+#df <- subset(df,df$Firm != "Daiwa")
+#ColumnsToApplySizeTo <- seq(1,ncol(df))
+
+# Print out the data table
+#DT::datatable(df, options = list(pageLength = 2000,
+#          initComplete = JS(
+#        "function(settings, json) {",
+#        "$(this.api().table().header()).css({'font-size': '70%'});",
+#        "}")) ) %>%
+#  DT::formatStyle(columns = ColumnsToApplySizeTo, fontSize = '70%')
+
+df <- na.omit(df)
+
+# Convert to USD
+df$Grev         <- df$Grev * df$USD
+df$GPBT         <- df$GPBT * df$USD
+df$IBrev        <- df$IBrev * df$USD
+df$IBPBT        <- df$IBPBT * df$USD
+df$CM.FICC      <- df$CM.FICC * df$USD
+df$CM.EQT       <- df$CM.EQT * df$USD
+df$CM.OTH       <- df$CM.OTH * df$USD
+    
+# Store a copy of the original data
+OrigDF <- df
+
+# Now remove the quarterly figures from the set
+df <- filter(df,Period == "FY")
+
+QuarterlyOnly <- filter(df,Period != "FY")
+
+```
+
+
+```{r}
+
+# Create new data frame with only columns we need
+# note: always kkep df as the base data frame which we use as the source of data
+Newdf <- data.frame(Firm    = df$Firm,
+                    Year    = df$Year,
+                    Base.CCY= df$Base.CCY,
+                    Region  = df$Region,
+                    Country = df$Country,
+                    Grev    = df$Grev,
+                    IBPBT   = df$IBPBT,
+                    CM.FICC = df$CM.FICC,
+                    CM.EQT  = df$CM.EQT,
+                    CM.OTH  = df$CM.OTH
+                    )
+
+# First Select only rows with Group revenue figures
+Newdf <- filter(Newdf,Grev != 0)
+
+Newdf$Firm <- factor(Newdf$Firm)
+
+```
+
+Clustering by revenue figures
+=======================================================================
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### Global
+
+```{r GlobalAnalysis, fig.height=7, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# Create new data frame for ByYear analysis Ibpbt
+ByYear <- data.frame(Firm=Newdf$Firm,Year=Newdf$Year,IBPBT=Newdf$IBPBT)
+ByYear$Year <- as.numeric(as.character(ByYear$Year)) # Make year numeric
+ByYear <- subset(ByYear,Year > 2012 & Year < 2019)   # Filter out zeros
+
+ByYear$Year <- as.factor(as.numeric(as.character(ByYear$Year)))     # Make Year a factor
+ByYear$IBPBT <- as.numeric(as.character(ByYear$IBPBT))              # Make IBPBT a numeric field
+
+ByYearIBPBT <- ByYear %>% spread(Year,IBPBT,sep="-IBPBT-")               # Pivot the Year column to year columns
+
+# Create new data frame for ByYear analysis Grev
+ByYear <- data.frame(Firm=Newdf$Firm,Year=Newdf$Year,Grev=Newdf$Grev)
+ByYear$Year <- as.numeric(as.character(ByYear$Year)) # Make year numeric
+ByYear <- subset(ByYear,Year > 2012 & Year < 2019)   # Filter out zeros
+
+ByYear$Year <- as.factor(as.numeric(as.character(ByYear$Year)))     # Make Year a factor
+ByYear$Grev <- as.numeric(as.character(ByYear$Grev))              # Make Grev a numeric field
+
+ByYearGrev <- ByYear %>% spread(Year,Grev,sep="-Grev-")               # Pivot the Year column to year columns
+ByYearGrev$Firm <- NULL
+
+# Create new data frame for ByYear analysis CM.EQT
+ByYear <- data.frame(Firm=Newdf$Firm,Year=Newdf$Year,CM.EQT=Newdf$CM.EQT)
+ByYear$Year <- as.numeric(as.character(ByYear$Year)) # Make year numeric
+ByYear <- subset(ByYear,Year > 2012 & Year < 2019)   # Filter out zeros
+
+ByYear$Year <- as.factor(as.numeric(as.character(ByYear$Year)))     # Make Year a factor
+ByYear$CM.EQT <- as.numeric(as.character(ByYear$CM.EQT))              # Make CM.EQT a numeric field
+
+ByYearCM.EQT <- ByYear %>% spread(Year,CM.EQT,sep="-CM.EQT-")               # Pivot the Year column to year columns
+ByYearCM.EQT$Firm <- NULL
+
+# Combine
+ByYear <- cbind(ByYearGrev,ByYearIBPBT,ByYearCM.EQT)
+
+ByYear <- na.omit(ByYear) # Remove any zeros
+
+Firms <- ByYear$Firm      # SAve the firm for clustering
+ByYear$Firm <- NULL       # Remove it
+
+# Do clustering
+NewDataFrame <- FuzzyClustering(DataFrame = ByYear,
+                                 Columns="",
+                                 GroupColumnName="IBPBT",
+                                 NumberOfClusters=3,
+                                 ScaleData = TRUE,
+                                 PlotModel = TRUE,
+                                 Debug=FALSE,
+                                 Plotsilhouette = FALSE,
+                                 IncludeMembership=TRUE)
+# Add the Firm back in
+NewDataFrame$Firm <- Firms
+
+
+# Store in new data frame
+Newdf <- NewDataFrame
+
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Clusters data frame
+
+```{r}
+ColumnsToApplySizeTo <- seq(1,ncol(Newdf))
+DT::datatable(Newdf, options = list(pageLength = 2000,
+          initComplete = JS(
+        "function(settings, json) {",
+        "$(this.api().table().header()).css({'font-size': '70%'});",
+        "}")) ) %>%
+  DT::formatStyle(columns = ColumnsToApplySizeTo, fontSize = '70%')
+```
+
+Recomended Clusters
+=======================================================================
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### Group 1 - Tier 1 Scale banks
+
+```{r fig.width=9}
+
+# Now remove the quarterly figures from the set
+OrigDF <- filter(OrigDF,Period == "FY")
+OrigDF$Year <- as.numeric(as.character(OrigDF$Year))
+OrigDF <- filter(OrigDF,Year <= 2018)
+OrigDF <- filter(OrigDF,Year > 2012)
+
+
+GroupDF <- data.frame(Firm = Newdf$Firm,
+                      Group = Newdf$IBPBT_Cluster_Group)
+
+NewDF <- merge(OrigDF,GroupDF,by="Firm")
+
+NewDF <- data.frame(Group=NewDF$Group,
+                    Firm = NewDF$Firm,
+                    Year = NewDF$Year,
+                    Grev = NewDF$Grev,
+                    GPBT = NewDF$GPBT)
+
+NewDF$YearDate <- paste(NewDF$Year,"0101",sep="",colapse=NULL)
+NewDF$YearDate <- as.Date(NewDF$YearDate,"%Y%m%d")
+
+cols <- Dark1Set # Use standard colours
+
+Group1DF <- subset(NewDF,Group==1)
+BasePlot <- ggplot(Group1DF,aes(x=YearDate,y=Grev,colour=Firm)) +
+  geom_line(aes(x=YearDate,y=Grev)) +
+  #geom_line(aes(x=YearDate,y=GPBT)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("Group Revenue") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+
+```
+
+### Group 1 Profit Before Tax
+
+```{r fig.width=9}
+BasePlot <- ggplot(Group1DF,aes(x=YearDate,y=Grev,colour=Firm)) +
+  #geom_line(aes(x=YearDate,y=Grev)) +
+  geom_line(aes(x=YearDate,y=GPBT)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("Profit Before Tax") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+### %Profit
+
+```{r fig.width=9}
+
+Group1DF$PercentProfit <- round(Group1DF$GPBT / Group1DF$Grev * 100)
+
+BasePlot <- ggplot(Group1DF,aes(x=YearDate,y=PercentProfit,colour=Firm)) +
+  #geom_line(aes(x=YearDate,y=Grev)) +
+  geom_line(aes(x=YearDate,y=PercentProfit)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("%Profit") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### Group 2 - Tier 2 - Global banks
+
+```{r fig.width=9}
+Group2DF <- subset(NewDF,Group==2)
+BasePlot <- ggplot(Group2DF,aes(x=YearDate,y=Grev,colour=Firm)) +
+  geom_line(aes(x=YearDate,y=Grev)) +
+  #geom_line(aes(x=YearDate,y=GPBT)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("Group Revenue") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+### Group 2 Profit Before Tax
+
+```{r fig.width=9}
+BasePlot <- ggplot(Group2DF,aes(x=YearDate,y=Grev,colour=Firm)) +
+  #geom_line(aes(x=YearDate,y=Grev)) +
+  geom_line(aes(x=YearDate,y=GPBT)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("Profit Before Tax") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+### %Profit
+
+```{r fig.width=9}
+
+Group2DF$PercentProfit <- round(Group2DF$GPBT / Group2DF$Grev * 100)
+
+BasePlot <- ggplot(Group2DF,aes(x=YearDate,y=PercentProfit,colour=Firm)) +
+  #geom_line(aes(x=YearDate,y=Grev)) +
+  geom_line(aes(x=YearDate,y=PercentProfit)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("%Profit") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### Group 3 - Tier 2 - Regional banks
+
+```{r fig.width=9}
+Group3DF <- subset(NewDF,Group==3)
+BasePlot <- ggplot(Group3DF,aes(x=YearDate,y=Grev,colour=Firm)) +
+  geom_line(aes(x=YearDate,y=Grev)) +
+  #geom_line(aes(x=YearDate,y=GPBT)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("Group Revenue") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+### Group 3 Profit Before Tax
+
+```{r fig.width=9}
+BasePlot <- ggplot(Group3DF,aes(x=YearDate,y=Grev,colour=Firm)) +
+  #geom_line(aes(x=YearDate,y=Grev)) +
+  geom_line(aes(x=YearDate,y=GPBT)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("Profit Before Tax") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+### %Profit
+
+```{r fig.width=9}
+
+Group3DF$PercentProfit <- round(Group3DF$GPBT / Group3DF$Grev * 100)
+
+BasePlot <- ggplot(Group3DF,aes(x=YearDate,y=PercentProfit,colour=Firm)) +
+  #geom_line(aes(x=YearDate,y=Grev)) +
+  geom_line(aes(x=YearDate,y=PercentProfit)) +
+  #scale_fill_brewer(palette="Blues")+
+  scale_colour_manual(values = cols,aesthetics = "fill") +
+  xlab("Year") +
+  ylab("%Profit") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+Cluster Averages
+=======================================================================
+
+
+```{r}
+
+SummaryGroup1 <- Group1DF %>%
+  group_by(Year) %>%
+  summarize(MeanGrev = mean(Grev),
+            MeanProfit = mean(GPBT),
+            MeanPercentProfit = mean(PercentProfit))
+
+
+```
+
+
+```{r}
+
+SummaryGroup2 <- Group2DF %>%
+  group_by(Year) %>%
+  summarize(MeanGrev = mean(Grev),
+            MeanProfit = mean(GPBT),
+            MeanPercentProfit = mean(PercentProfit))
+
+
+```
+
+
+```{r}
+
+SummaryGroup3 <- Group3DF %>%
+  group_by(Year) %>%
+  summarize(MeanGrev = mean(Grev),
+            MeanProfit = mean(GPBT),
+            MeanPercentProfit = mean(PercentProfit))
+
+```
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### Mean Group Revenue
+
+```{r}
+
+SummaryGroup1$MeanGrevGp1 <- SummaryGroup1$MeanGrev
+SummaryGroup2$MeanGrevGp2 <- SummaryGroup2$MeanGrev
+SummaryGroup3$MeanGrevGp3 <- SummaryGroup3$MeanGrev
+
+
+SummaryOfGroups <- merge(SummaryGroup1,SummaryGroup2,by="Year")
+SummaryOfGroups <- merge(SummaryOfGroups,SummaryGroup3,by="Year")
+
+Summary <- gather(SummaryOfGroups, key = "Group", value = "Value",
+       MeanGrevGp1, MeanGrevGp2, MeanGrevGp3)
+
+BasePlot <- ggplot(Summary,aes(x=Year,y=Value,colour=Group)) +
+  geom_line() +
+  xlab("Year") +
+  ylab("Mean Group Revenue") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### Mean Percent Profit
+
+```{r}
+
+SummaryGroup1$MeanPercentProfitGp1 <- SummaryGroup1$MeanPercentProfit
+SummaryGroup2$MeanPercentProfitGp2 <- SummaryGroup2$MeanPercentProfit
+SummaryGroup3$MeanPercentProfitGp3 <- SummaryGroup3$MeanPercentProfit
+
+
+SummaryOfGroups <- merge(SummaryGroup1,SummaryGroup2,by="Year")
+SummaryOfGroups <- merge(SummaryOfGroups,SummaryGroup3,by="Year")
+
+Summary <- gather(SummaryOfGroups, key = "Group", value = "Value",
+       MeanPercentProfitGp1, MeanPercentProfitGp2, MeanPercentProfitGp3)
+
+BasePlot <- ggplot(Summary,aes(x=Year,y=Value,colour=Group)) +
+  geom_line() +
+  xlab("Year") +
+  ylab("Mean Percent Profit for group") +
+  theme_AI() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0),
+        legend.position = "right") 
+
+print(BasePlot)
+
+```
+
