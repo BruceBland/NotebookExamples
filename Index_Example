@@ -1,0 +1,49 @@
+---
+title: "ION"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    navbar:
+      - { title: "Index Page", href: "file:///L:/RACAD/MarketingAnalysis/MarketingAnalysisProject/Index.html", align: left }
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+###Basic Analysis
+
+[Index Page](file:///L:/RACAD/MarketingAnalysis/MarketingAnalysisProject/Index.html)
+
+This is the main index page for all analysis.
+
+[Data Table](file:///L:/RACAD/MarketingAnalysis/MarketingAnalysisProject/Flex_DataTable_View.html)
+
+This link provides a basic data table format display of the company finacial data that is being used within these analysis pages.
+
+
+###Group Revenue Breakdowns
+
+[Group Revenues](file:///L:/RACAD/MarketingAnalysis/MarketingAnalysisProject/RevenueBreakdownReport.html)
+
+This link provides a detailed analysis of the group revenues.
+
+
+###Equities Market Share Charts
+
+[Market Share Charts](file:///L:/RACAD/MarketingAnalysis/MarketingAnalysisProject/MarketShareCharts.html)
+
+This link provides a detailed analysis of the equities market share changes between companies.
+
+
+###Cluster Analysis
+
+[Cluster Analysis](file:///L:/RACAD/MarketingAnalysis/MarketingAnalysisProject/ClusterAnalysis.html)
+
+This link demonstrates the clustering of the different companys using AI techniques.
+
+####End of Index
