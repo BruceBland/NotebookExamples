@@ -1,0 +1,147 @@
+#
+# Create powerpoint slides from R
+#
+# Example code only
+
+# Libraries required
+library(officer)
+library(magrittr)
+
+FileNameOfPresentationTemplate <- "Blankpowerpoint.pptx"
+ClientName <- "Sigma"
+
+# Load up the powerpoint we want to look at
+ClientPresentation <- read_pptx(FileNameOfPresentationTemplate)
+
+# Display
+print(layout_summary(ClientPresentation))
+
+# Get a dataframe of all the layouts that the presentation has
+TemplateLayouts <- layout_properties(ClientPresentation) %>%
+                        select(name,type,ph_label)
+
+TemplateLayouts <- TemplateLayouts %>%
+                        arrange(name) %>%
+                        print()
+
+# Get doc properties
+Properties <- doc_properties(ClientPresentation)
+print(Properties)
+
+# Get first slide summary
+#SlideOneSummary <- slide_summary(ClientPresentation,1)
+
+Agenda <- c("Introduction","Pricing details","Out of Scope","Conclusion") 
+
+MainTextProperties <- fp_text(color = "#00A4E6",
+                          font.size = 16,
+                          bold = TRUE,
+                          italic = FALSE,
+                          underlined = FALSE,
+                          font.family = "Source Sans Pro Semibold")
+
+SubTextProperties <- fp_text(color = "#00A4E6",
+                              font.size = 16,
+                              bold = FALSE,
+                              italic = FALSE,
+                              underlined = FALSE,
+                              font.family = "Source Sans Pro Light")
+
+
+SummaryDescription <- block_list(
+  fpar(ftext(text="Summary of pricing information given in the document",prop=MainTextProperties)),
+  fpar(ftext("This document describes the pricing of used by ION markets",prop=SubTextProperties)),
+  fpar(
+    ftext("", prop=SubTextProperties),
+    ftext("All pricing can be obtained via product marketing", prop=SubTextProperties),
+    ftext("Please do not distribute this document", prop=SubTextProperties)
+  ))
+
+PlotGraphics <- ggplot(mpg, aes(class)) + geom_bar()
+
+ul <- unordered_list(
+  level_list = c(1, 3, 3, 1, 3, 3),
+  str_list = c("Main point 1", "Sub point 1", "Subpoint 2", "Main Point 2", "Sub point 1", "Sub point 2"),
+  style = MainTextProperties )
+
+# Create a new slide deck using the templates in the powerpoint document
+my_pres <-
+  
+  # Load template
+  read_pptx(FileNameOfPresentationTemplate) %>%
+  
+  # Remove all slides currently in the deck
+  remove_slide(index=1) %>% # Always remove the first slide which makes the second the first
+  remove_slide(index=1) %>%
+  remove_slide(index=1) %>%
+  
+  ############################################################################
+  # Add a slide
+  add_slide(layout="Title Slide", master="ION PowerPoint Template A4") %>%
+  
+  # Add some text to the title (ctrTitle)
+  ph_with(value="Pricing",location = ph_location_label(ph_label = "Title - master")) %>%   # Title
+  ph_with(value="Pricing Summary",location = ph_location_label(ph_label = "Subtitle - master")) %>% # Subtitle
+  ph_with(value="Sigma",location = ph_location_label(ph_label = "Client - master")) %>%   # Client
+  
+  #############################################################################
+  # Add an agenda slide
+  add_slide(layout="Agenda", master="ION PowerPoint Template A4") %>%
+
+  # Add a data table in a slide - watch out for number of lines
+  ph_with(value=Agenda,location = ph_location_label(ph_label = "Guidance")) %>%   # Client
+  
+  #############################################################################
+  # Add a text based slide
+  add_slide(layout="Title and Content", master="ION PowerPoint Template A4") %>%
+  
+  ph_with(value="Review Summary",location = ph_location_label(ph_label = "Title Placeholder 1")) %>%   # Client
+  
+  # Add a data table in a slide - watch out for number of lines
+  ph_with(value=SummaryDescription,location = ph_location_label(ph_label = "Content Placeholder 1")) %>%   # Client
+
+  #############################################################################
+  # Add bullet points to a slide
+  add_slide(layout="Title and Content", master="ION PowerPoint Template A4") %>%
+  
+  ph_with(value="Bullet points Summary",location = ph_location_label(ph_label = "Title Placeholder 1")) %>%   # Client
+  
+  # Add a unstructured list
+  ph_with(value=ul,location=ph_location_label(ph_label = "Content Placeholder 1")) %>%
+  
+  #############################################################################
+  # Add a table based slide
+  add_slide(layout="Title and Content", master="ION PowerPoint Template A4") %>%
+  
+  ph_with(value="Review Table",location = ph_location_label(ph_label = "Title Placeholder 1")) %>%   # Client
+  
+  # Add a data table in a slide - watch out for number of lines
+  ph_with(value=head(TemplateLayouts,10),location = ph_location_label(ph_label = "Content Placeholder 1")) %>%   # Client
+  
+  #############################################################################
+  # Add a separator slide
+  add_slide(layout="Section Divider 4", master="ION PowerPoint Template A4") %>%
+  
+  ph_with(value="Graphical Summary",location = ph_location_label(ph_label = "Subtitle 2")) %>%   # Client
+  
+  
+    
+  #############################################################################
+  # Add a graphical slide
+  add_slide(layout="Title and Content", master="ION PowerPoint Template A4") %>%
+  
+  ph_with(value="Graphical Summary",location = ph_location_label(ph_label = "Title Placeholder 1")) %>%   # Client
+  
+  # Add a data table in a slide - watch out for number of lines
+  ph_with(value=PlotGraphics,location = ph_location_label(ph_label = "Content Placeholder 1")) %>%   # Client
+  
+  
+  #############################################################################
+  # Add a final slide
+  add_slide(layout="Final page 4", master="ION PowerPoint Template A4") %>%
+  
+  
+  # Now create a new powerpoint file containing the new slide
+  print( target = paste(ClientName,"_Pricing.pptx",sep="")) %>% 
+  invisible()
+
