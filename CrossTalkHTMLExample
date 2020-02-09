@@ -1,0 +1,40 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(crosstalk)
+library()
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+library(crosstalk)
+library(leaflet)
+library(DT)
+
+# Wrap data frame in SharedData
+sd <- SharedData$new(quakes[sample(nrow(quakes), 1000),])
+
+# Use SharedData like a dataframe with Crosstalk-enabled widgets
+bscols(
+  list(
+    filter_slider("mag", "Magnitude", sd, column=~mag, step=0.1, width=250),
+    filter_checkbox("cyl", "Cylinders", sd, ~mag, inline = TRUE),
+    filter_slider("hp", "Horsepower", sd, ~mag, width = "100%"),
+    filter_select("auto", "Automatic", sd, ~ifelse(mag == 4, "Yes", "No"))
+  ),
+  datatable(sd, extensions="Scroller", style="bootstrap", class="compact", width="100%",
+    options=list(deferRender=TRUE, scrollY=300, scroller=TRUE))
+)
+```
+
